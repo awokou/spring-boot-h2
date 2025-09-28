@@ -4,12 +4,15 @@ import java.util.List;
 
 import com.server.spring.boot.h2.model.Product;
 import com.server.spring.boot.h2.service.ProductService;
+import com.server.spring.boot.h2.utils.CsvGeneratorUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,9 +22,11 @@ import org.springframework.web.bind.annotation.*;
 public class ProductController {
 
     private final ProductService productService;
+    private final CsvGeneratorUtil csvGeneratorUtil;
 
-    public ProductController(ProductService productService) {
+    public ProductController(ProductService productService, CsvGeneratorUtil csvGeneratorUtil) {
         this.productService = productService;
+        this.csvGeneratorUtil = csvGeneratorUtil;
     }
 
     @Operation(summary = "Retrieve all Products", tags = {"products", "get", "filter"})
@@ -70,5 +75,18 @@ public class ProductController {
     public ResponseEntity<List<Product>> searchProducts(@RequestParam String keyword) {
         List<Product> products = productService.searchProducts(keyword);
         return new ResponseEntity<>(products, HttpStatus.OK);
+    }
+
+    @GetMapping("/products/csv")
+    public ResponseEntity<byte[]> generateCsvFile() {
+        List<Product> products = productService.getAllProduct();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentDispositionFormData("attachment", "products.csv");
+
+        byte[] csvBytes = csvGeneratorUtil.generateCsv(products).getBytes();
+
+        return new ResponseEntity<>(csvBytes, headers, HttpStatus.OK);
     }
 }
